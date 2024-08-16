@@ -146,7 +146,7 @@ export default function FlashcardSets() {
                     </Box>
                 ) : flashcardSets.length === 0 ? (
                     <Typography variant="h5" sx={{ textAlign: 'center', mt: 4 }}>
-                        You don't have any flashcard sets yet. Create one to get started!
+                        You don&apos;t have any flashcard sets yet. Create one to get started!
                     </Typography>
                 ) : (
                     <Grid container spacing={4}>
