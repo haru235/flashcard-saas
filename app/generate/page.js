@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { collection, doc, getDoc, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Add as AddIcon, Save as SaveIcon } from '@mui/icons-material';
 
 const theme = createTheme({
