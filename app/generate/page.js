@@ -1,5 +1,5 @@
 "use client"
-import React from 'react';
+import React, { useState } from 'react';
 import { db } from "@/firebase";
 import { useUser } from "@clerk/nextjs";
 import { 
@@ -9,7 +9,6 @@ import {
 } from "@mui/material";
 import { collection, doc, getDoc, writeBatch } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { Add as AddIcon, Save as SaveIcon } from '@mui/icons-material';
 
 const theme = createTheme({
@@ -59,85 +58,93 @@ const theme = createTheme({
 });
 
 export default function Generate() {
-    const { isLoaded, isSignedIn, user } = useUser()
-    const [text, setText] = useState('')
-    const [flashcards, setFlashcards] = useState([])
-    const [setName, setSetName] = useState('')
-    const [setDescription, setSetDescription] = useState('')
-    const [dialogOpen, setDialogOpen] = useState(false)
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [isSaving, setIsSaving] = useState(false)
+    const { isLoaded, isSignedIn, user } = useUser();
+    const [text, setText] = useState('');
+    const [flashcards, setFlashcards] = useState([]);
+    const [setName, setSetName] = useState('');
+    const [setDescription, setSetDescription] = useState('');
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const router = useRouter();
 
-    const handleOpenDialog = () => setDialogOpen(true)
-    const handleCloseDialog = () => setDialogOpen(false)
-    const router = useRouter()
+    const handleOpenDialog = () => setDialogOpen(true);
+    const handleCloseDialog = () => setDialogOpen(false);
 
     const saveFlashcards = async () => {
         if (!setName.trim()) {
-            alert('Please enter a name for your flashcard set.')
-            return
+            alert('Please enter a name for your flashcard set.');
+            return;
         }
 
-        setIsSaving(true)
+        setIsSaving(true);
         try {
-            const userDocRef = doc(collection(db, 'users'), user.id)
-            const userDocSnap = await getDoc(userDocRef)
+            const userDocRef = doc(collection(db, 'users'), user.id);
+            const userDocSnap = await getDoc(userDocRef);
 
-            const batch = writeBatch(db)
+            const batch = writeBatch(db);
 
             if (userDocSnap.exists()) {
-                const userData = userDocSnap.data()
-                const updatedSets = [...(userData.flashcardSets || []), { name: setName, description: setDescription, size: flashcards.length }]
-                batch.update(userDocRef, { flashcardSets: updatedSets })
+                const userData = userDocSnap.data();
+                const updatedSets = [...(userData.flashcardSets || []), { name: setName, description: setDescription, size: flashcards.length }];
+                batch.update(userDocRef, { flashcardSets: updatedSets });
             } else {
-                batch.set(userDocRef, { flashcardSets: [{ name: setName, description: setDescription, size: flashcards.length }] })
+                batch.set(userDocRef, { flashcardSets: [{ name: setName, description: setDescription, size: flashcards.length }] });
             }
 
-            const setDocRef = doc(collection(userDocRef, 'flashcardSets'), setName)
-            batch.set(setDocRef, { flashcards })
+            const setDocRef = doc(collection(userDocRef, 'flashcardSets'), setName);
+            batch.set(setDocRef, { flashcards });
 
-            await batch.commit()
+            await batch.commit();
 
-            alert('Flashcards saved successfully')
-            handleCloseDialog()
-            setSetName('')
-            router.push('/flashcard-sets')
+            alert('Flashcards saved successfully');
+            handleCloseDialog();
+            setSetName('');
+            router.push('/flashcard-sets');
         } catch (error) {
-            console.error('Error saving flashcards:', error)
-            alert('An error occurred while saving flashcards. Please try again.')
+            console.error('Error saving flashcards:', error);
+            alert('An error occurred while saving flashcards. Please try again.');
         } finally {
-            setIsSaving(false)
+            setIsSaving(false);
         }
-    }
+    };
 
     const handleSubmit = async () => {
         if (!text.trim()) {
-            alert('Please enter some text to generate flashcards.')
-            return
+            alert('Please enter some text to generate flashcards.');
+            return;
         }
 
-        setIsGenerating(true)
+        setIsGenerating(true);
         try {
             const response = await fetch('/api/generate', {
                 method: 'POST',
                 body: text,
-            })
+            });
 
             if (!response.ok) {
-                throw new Error('Failed to generate flashcards')
+                throw new Error('Failed to generate flashcards');
             }
 
-            const data = await response.json()
-            setFlashcards(data.flashcards)
-            setSetName(data.name)
-            setSetDescription(data.description)
+            const data = await response.json();
+            setFlashcards(data.flashcards);
+            setSetName(data.name);
+            setSetDescription(data.description);
         } catch (error) {
-            console.error('Error generating flashcards:', error)
-            alert('An error occurred while generating flashcards. Please try again.')
+            console.error('Error generating flashcards:', error);
+            alert('An error occurred while generating flashcards. Please try again.');
         } finally {
-            setIsGenerating(false)
+            setIsGenerating(false);
         }
-    }
+    };
+
+    const handleDeleteFlashcard = async (index) => {
+        const updatedFlashcards = flashcards.filter((_, i) => i !== index);
+        setFlashcards(updatedFlashcards);
+
+        // Optionally, regenerate new flashcards if needed
+        await handleSubmit();
+    };
 
     if (!isLoaded || !isSignedIn) {
         return (
@@ -149,7 +156,7 @@ export default function Generate() {
                     </Box>
                 </Container>
             </ThemeProvider>
-        )
+        );
     }
 
     return (
@@ -216,6 +223,14 @@ export default function Generate() {
                                             <Typography variant="body1" sx={{ mb: 2 }}>{flashcard.front}</Typography>
                                             <Typography variant="h6" color="secondary" gutterBottom>Back:</Typography>
                                             <Typography variant="body1">{flashcard.back}</Typography>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                onClick={() => handleDeleteFlashcard(index)}
+                                                sx={{ mt: 2 }}
+                                            >
+                                                Delete
+                                            </Button>
                                         </CardContent>
                                     </Card>
                                 </Grid>
